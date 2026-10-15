@@ -1,114 +1,222 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Admin Dashboard | PharmaGo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/pharmago.css">
 </head>
-<body class="bg-slate-100">
-<nav class="bg-white shadow-md">
+<body>
+<nav>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
-                <div class="flex-shrink-0 flex items-center font-bold text-xl text-blue-600">PharmaGo Admin</div>
-                <div class="hidden sm:ml-6 sm:flex sm:space-x-8" id="nav-links">
-                    <a href="/admin_dashboard.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Dashboard</a>
-                </div>
+                <a href="/index.html" class="flex-shrink-0 flex items-center font-bold text-xl text-blue-600">
+                    PharmaGo <span class="text-slate-400 font-medium ml-2 text-sm">Admin</span>
+                </a>
+                <div class="hidden sm:ml-8 sm:flex sm:space-x-6" id="nav-links"></div>
             </div>
             <div class="hidden sm:ml-6 sm:flex sm:items-center" id="nav-user"></div>
         </div>
     </div>
 </nav>
 
-<div class="container max-w-5xl mx-auto p-4 sm:p-8">
-    <header class="text-center mb-10">
-        <h1 class="text-4xl font-bold text-slate-700">Admin Dashboard</h1>
-        <p class="text-slate-500 mt-2">Welcome, <span id="username-display"></span>!</p>
-    </header>
+<main class="container mx-auto px-4 py-7 sm:px-8">
+    <section class="dashboard-hero mb-8 overflow-hidden rounded-2xl">
+        <div class="relative z-10 max-w-2xl p-7 sm:p-10">
+            <span class="dashboard-eyebrow">Operations centre</span>
+            <h1 class="mt-3 text-3xl font-bold text-white sm:text-4xl">Good to see you, <span id="username-display">Admin</span>.</h1>
+            <p class="mt-3 max-w-xl text-emerald-50">Keep every prescription, order, and medicine moving safely with a clear view of today’s activity.</p>
+            <div class="mt-6 flex flex-wrap gap-3" id="hero-actions"></div>
+        </div>
+        <div class="dashboard-hero-image" role="img" aria-label="Pharmacist preparing medicine"></div>
+    </section>
 
-    <div id="dashboard-links" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Links will be populated by script based on role -->
+    <div id="loading-state" class="rounded-xl bg-white p-8 text-center text-slate-500">
+        Loading your dashboard…
     </div>
-</div>
+
+    <section id="dashboard-content" class="hidden">
+        <div id="stats-grid" class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"></div>
+
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-5">
+            <section class="rounded-xl bg-white p-6 xl:col-span-3">
+                <div class="mb-5 flex items-center justify-between">
+                    <div>
+                        <p class="dashboard-section-kicker">Needs attention</p>
+                        <h2 class="text-xl font-bold">Low stock medicines</h2>
+                    </div>
+                    <a href="/inventory.html" class="text-sm font-bold text-blue-600">View inventory →</a>
+                </div>
+                <div id="low-stock-list"></div>
+            </section>
+
+            <section class="rounded-xl bg-white p-6 xl:col-span-2">
+                <div class="mb-5 flex items-center justify-between">
+                    <div>
+                        <p class="dashboard-section-kicker">Latest activity</p>
+                        <h2 class="text-xl font-bold">Recent orders</h2>
+                    </div>
+                    <a href="/orders.html" class="text-sm font-bold text-blue-600">View all →</a>
+                </div>
+                <div id="recent-orders-list"></div>
+            </section>
+        </div>
+
+        <section class="mt-6 rounded-xl bg-white p-6">
+            <div class="mb-5">
+                <p class="dashboard-section-kicker">Shortcuts</p>
+                <h2 class="text-xl font-bold">Manage your workspace</h2>
+            </div>
+            <div id="dashboard-links" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"></div>
+        </section>
+    </section>
+</main>
 
 <script>
+    const roleLinks = {
+        inventory: ['ROLE_INVENTORY_MANAGER', 'ROLE_SUPER_ADMIN'],
+        finance: ['ROLE_FINANCE_OFFICER', 'ROLE_SUPER_ADMIN'],
+        orders: ['ROLE_FINANCE_OFFICER', 'ROLE_SUPER_ADMIN', 'ROLE_DELIVERY_COORDINATOR', 'ROLE_INVENTORY_MANAGER'],
+        prescriptions: ['ROLE_GENERAL_PHYSICIAN', 'ROLE_PHARMACY_ASSISTANT', 'ROLE_SUPER_ADMIN'],
+        users: ['ROLE_SUPER_ADMIN']
+    };
+
+    const endpoints = {
+        inventory: '/api/inventory',
+        orders: '/api/orders',
+        users: '/api/users/all'
+    };
+
+    async function requestJson(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Unable to load ${url}`);
+        }
+        return response.json();
+    }
+
+    function canAccess(user, area) {
+        return roleLinks[area].includes(user.role);
+    }
+
+    function formatDate(value) {
+        if (!value) return 'Date unavailable';
+        return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' }).format(new Date(value));
+    }
+
+    function formatCurrency(value) {
+        return `Rs. ${Number(value || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}`;
+    }
+
+    function statCard(label, value, detail, iconClass) {
+        return `<article class="dashboard-stat">
+            <div class="dashboard-stat-icon ${iconClass}">${iconClass === 'stat-teal' ? '＋' : iconClass === 'stat-blue' ? '▣' : iconClass === 'stat-amber' ? '!' : '◉'}</div>
+            <div><p class="text-sm text-slate-500">${label}</p><p class="mt-1 text-2xl font-bold">${value}</p><p class="mt-1 text-xs text-slate-400">${detail}</p></div>
+        </article>`;
+    }
+
+    function populateNavigation(user) {
+        const navLinks = document.getElementById('nav-links');
+        const navUser = document.getElementById('nav-user');
+        const links = [['Dashboard', '/admin_dashboard.html', true]];
+        if (canAccess(user, 'inventory')) links.push(['Inventory', '/inventory.html']);
+        if (canAccess(user, 'orders')) links.push(['Orders', '/orders.html']);
+        if (canAccess(user, 'finance')) links.push(['Finance', '/finance_dashboard.html']);
+        if (canAccess(user, 'prescriptions')) links.push(['Prescriptions', '/view_prescriptions.html']);
+        if (canAccess(user, 'users')) links.push(['Users', '/user_management.html']);
+        navLinks.innerHTML = links.map(([label, href, active]) =>
+            `<a href="${href}" class="${active ? 'dashboard-nav-active' : ''} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">${label}</a>`
+        ).join('');
+        navUser.innerHTML = `<span class="mr-4 text-sm text-gray-600">${user.username}</span>
+            <form action="/logout" method="post"><button type="submit" class="rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white">Logout</button></form>`;
+    }
+
+    function populateActions(user) {
+        const actions = [];
+        if (canAccess(user, 'inventory')) actions.push(['Add medicine', '/inventory.html', '＋']);
+        if (canAccess(user, 'orders')) actions.push(['Review orders', '/orders.html', '→']);
+        if (canAccess(user, 'prescriptions')) actions.push(['Review prescriptions', '/view_prescriptions.html', '✓']);
+        document.getElementById('hero-actions').innerHTML = actions.slice(0, 2).map(([label, href, icon]) =>
+            `<a href="${href}" class="rounded-lg bg-white px-4 py-2 text-sm font-bold text-teal-800 shadow-sm hover:bg-emerald-50">${icon} ${label}</a>`
+        ).join('');
+    }
+
+    function renderInventory(medicines) {
+        const lowStock = medicines.filter(item => Number(item.stockQuantity) <= 10).sort((a, b) => a.stockQuantity - b.stockQuantity).slice(0, 5);
+        const target = document.getElementById('low-stock-list');
+        target.innerHTML = lowStock.length ? lowStock.map(item => `
+            <div class="dashboard-list-row">
+                <div class="medicine-thumb">${item.name.substring(0, 1).toUpperCase()}</div>
+                <div class="min-w-0 flex-1"><p class="truncate font-semibold">${item.name}</p><p class="text-xs text-slate-400">${item.expiryDate ? `Expires ${formatDate(item.expiryDate)}` : 'Expiry date unavailable'}</p></div>
+                <span class="status-badge ${item.stockQuantity === 0 ? 'status-danger' : 'status-warning'}">${item.stockQuantity === 0 ? 'Out of stock' : `${item.stockQuantity} left`}</span>
+            </div>`).join('') : '<p class="py-6 text-sm text-slate-500">All medicines are sufficiently stocked.</p>';
+        return { total: medicines.length, low: lowStock.length };
+    }
+
+    function renderOrders(orders) {
+        const recent = [...orders].sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate)).slice(0, 5);
+        document.getElementById('recent-orders-list').innerHTML = recent.length ? recent.map(order => `
+            <div class="dashboard-list-row">
+                <div class="order-icon">#</div>
+                <div class="min-w-0 flex-1"><p class="font-semibold">Order #${order.id}</p><p class="text-xs text-slate-400">${formatDate(order.orderDate)}</p></div>
+                <span class="font-bold text-slate-700">${formatCurrency(order.totalPrice)}</span>
+            </div>`).join('') : '<p class="py-6 text-sm text-slate-500">No orders have been placed yet.</p>';
+        return orders.length;
+    }
+
+    function renderShortcuts(user) {
+        const cards = [
+            ['inventory', '/inventory.html', 'Inventory', 'Update medicine stock and pricing.', '📦'],
+            ['orders', '/orders.html', 'Orders', 'Track and process customer orders.', '🧾'],
+            ['prescriptions', '/view_prescriptions.html', 'Prescriptions', 'Review uploaded prescriptions.', '✚'],
+            ['users', '/user_management.html', 'User management', 'Manage staff and customer access.', '👥'],
+            ['finance', '/finance_dashboard.html', 'Finance', 'Review payments and feedback.', '▤']
+        ].filter(([area]) => canAccess(user, area));
+        document.getElementById('dashboard-links').innerHTML = cards.map(([, href, title, description, icon]) =>
+            `<a href="${href}" class="dashboard-shortcut"><span class="dashboard-shortcut-icon">${icon}</span><span><strong>${title}</strong><small>${description}</small></span><span class="ml-auto text-teal-700">→</span></a>`
+        ).join('');
+    }
+
     async function checkAuth() {
         try {
             const response = await fetch('/api/auth/me');
-            if (!response.ok) {
-                window.location.href = '/login.html';
-                return;
-            }
+            if (!response.ok) { window.location.href = '/login.html'; return; }
             const user = await response.json();
-            const isAdmin = user.role !== 'ROLE_CUSTOMER';
-
-            if (!isAdmin) {
-                alert("Access Denied: You do not have permission to view this page.");
+            if (user.role === 'ROLE_CUSTOMER') {
+                alert('Access denied: this page is for staff users.');
                 window.location.href = '/store.html';
                 return;
             }
+            document.getElementById('username-display').textContent = user.username;
+            populateNavigation(user);
+            populateActions(user);
+            renderShortcuts(user);
 
-            populateUI(user);
-
+            const requests = [
+                requestJson(endpoints.inventory),
+                canAccess(user, 'orders') ? requestJson(endpoints.orders) : Promise.resolve([])
+            ];
+            if (canAccess(user, 'users')) requests.push(requestJson(endpoints.users));
+            const [medicines, orders, users = []] = await Promise.all(requests);
+            const inventorySummary = renderInventory(medicines);
+            const userCount = canAccess(user, 'users') ? users.length : '—';
+            document.getElementById('stats-grid').innerHTML =
+                statCard('Total medicines', inventorySummary.total, 'Products in catalogue', 'stat-teal') +
+                statCard('Low stock alerts', inventorySummary.low, inventorySummary.low ? 'Restock recommended' : 'Stock levels look good', 'stat-amber') +
+                statCard('Total orders', orders.length, 'Orders in the system', 'stat-blue') +
+                statCard('Team & customers', userCount, canAccess(user, 'users') ? 'Registered accounts' : 'Admin access required', 'stat-purple');
+            renderOrders(orders);
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('hidden');
         } catch (error) {
-            window.location.href = '/login.html';
+            document.getElementById('loading-state').textContent = 'Some dashboard data could not be loaded. Please refresh and try again.';
+            console.error(error);
         }
-    }
-
-    function createDashboardCard(href, title, description) {
-        return `
-            <a href="${href}" class="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all">
-                <h3 class="font-bold text-lg text-blue-600">${title}</h3>
-                <p class="text-slate-500 mt-1">${description}</p>
-            </a>
-        `;
-    }
-
-    function populateUI(user) {
-        document.getElementById('username-display').textContent = user.username;
-        const navLinks = document.getElementById('nav-links');
-        const navUser = document.getElementById('nav-user');
-        const dashboardLinks = document.getElementById('dashboard-links');
-
-        navUser.innerHTML = `
-            <span class="text-sm text-gray-600 mr-4">Logged in as ${user.username} (${user.role.replace('ROLE_', '')})</span>
-             <form action="/logout" method="post">
-                <button type="submit" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-md hover:bg-red-600 transition">Logout</button>
-             </form>
-        `;
-
-        let navHtml = '<a href="/admin_dashboard.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Dashboard</a>';
-        let dashboardHtml = '';
-
-        if (['ROLE_INVENTORY_MANAGER', 'ROLE_SUPER_ADMIN'].includes(user.role)) {
-            navHtml += '<a href="/inventory.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Inventory</a>';
-            dashboardHtml += createDashboardCard('/inventory.html', 'Inventory Management', 'Add, edit, and remove medicines from stock.');
-        }
-        if (['ROLE_FINANCE_OFFICER', 'ROLE_SUPER_ADMIN'].includes(user.role)) {
-            navHtml += '<a href="/finance_dashboard.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Finance</a>';
-            dashboardHtml += createDashboardCard('/finance_dashboard.html', 'Finance Dashboard', 'Monitor payments and manage customer reviews.');
-        }
-        if (['ROLE_FINANCE_OFFICER', 'ROLE_SUPER_ADMIN', 'ROLE_DELIVERY_COORDINATOR', 'ROLE_INVENTORY_MANAGER'].includes(user.role)) {
-            navHtml += '<a href="/orders.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Orders</a>';
-            dashboardHtml += createDashboardCard('/orders.html', 'Order Management', 'View and manage all customer orders.');
-        }
-        if (['ROLE_GENERAL_PHYSICIAN', 'ROLE_PHARMACY_ASSISTANT', 'ROLE_SUPER_ADMIN'].includes(user.role)) {
-            navHtml += '<a href="/view_prescriptions.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Prescriptions</a>';
-            dashboardHtml += createDashboardCard('/view_prescriptions.html', 'Review Prescriptions', 'View and manage customer-uploaded prescriptions.');
-        }
-        if (user.role === 'ROLE_SUPER_ADMIN') {
-            navHtml += '<a href="/user_management.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">User Management</a>';
-            dashboardHtml += createDashboardCard('/user_management.html', 'User Management', 'Create, edit, and manage all user accounts.');
-        }
-
-        navLinks.innerHTML = navHtml;
-        dashboardLinks.innerHTML = dashboardHtml || '<p class="text-center col-span-full">No administrative sections are available for your role.</p>';
     }
 
     document.addEventListener('DOMContentLoaded', checkAuth);
 </script>
 </body>
 </html>
-

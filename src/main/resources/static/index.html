@@ -1,12 +1,83 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Welcome to PharmaGo</title>
-    <meta http-equiv="refresh" content="0;url=/login.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaGo | Your trusted online pharmacy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/pharmago.css">
 </head>
-<body>
-<p>If you are not redirected automatically, follow this <a href="/login.html">link to the login page</a>.</p>
+<body class="home-page">
+<nav>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+            <a href="/index.html" class="pharma-brand"><span>✚</span> PharmaGo</a>
+            <div class="flex items-center gap-3">
+                <a href="/login.html" class="home-nav-link">Sign in</a>
+                <a href="/register.html" class="home-nav-button">Create account</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main>
+    <section class="home-hero">
+        <div class="home-hero-copy">
+            <span class="dashboard-eyebrow">Trusted pharmacy care</span>
+            <h1>Better health, delivered with care.</h1>
+            <p>Order quality medicines and wellness essentials from PharmaGo, your simple and reliable online pharmacy.</p>
+            <div class="home-hero-actions">
+                <a href="/store.html" class="home-primary-button">Explore medicines <span>→</span></a>
+                <a href="/register.html" class="home-secondary-button">Join PharmaGo</a>
+            </div>
+            <div class="home-trust-row">
+                <span>✓ Quality products</span><span>✓ Secure ordering</span><span>✓ Helpful care</span>
+            </div>
+        </div>
+        <div class="home-hero-art" role="img" aria-label="Pharmacy medicines and wellness products"></div>
+    </section>
+
+    <section class="home-section">
+        <div class="home-section-heading">
+            <span class="dashboard-section-kicker">Everything in one place</span>
+            <h2>Care that fits your day</h2>
+            <p>From everyday essentials to prescription support, PharmaGo helps you manage your health with confidence.</p>
+        </div>
+        <div class="home-feature-grid">
+            <article class="home-feature-card">
+                <span class="home-feature-icon">▣</span>
+                <h3>Shop with confidence</h3>
+                <p>Browse trusted medicines and wellness products with clear details and easy ordering.</p>
+                <a href="/store.html">Visit the store →</a>
+            </article>
+            <article class="home-feature-card">
+                <span class="home-feature-icon home-feature-blue">✚</span>
+                <h3>Manage prescriptions</h3>
+                <p>Upload and manage prescriptions securely so your care stays organized.</p>
+                <a href="/login.html">Get started →</a>
+            </article>
+            <article class="home-feature-card">
+                <span class="home-feature-icon home-feature-coral">✓</span>
+                <h3>Track your orders</h3>
+                <p>Keep your order history close and stay informed from checkout to delivery.</p>
+                <a href="/login.html">Sign in to view →</a>
+            </article>
+        </div>
+    </section>
+
+    <section class="home-care-strip">
+        <div>
+            <span class="dashboard-eyebrow">PharmaGo promise</span>
+            <h2 class="text-white">Small steps make a healthier tomorrow.</h2>
+            <p>We make everyday pharmacy care feel clear, convenient, and personal.</p>
+        </div>
+        <a href="/store.html" class="home-light-button">Start shopping <span>→</span></a>
+    </section>
+</main>
+
+<footer class="home-footer">
+    <span class="pharma-brand"><span>✚</span> PharmaGo</span>
+    <span>Your trusted online pharmacy</span>
+</footer>
 </body>
 </html>
-
